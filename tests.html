@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test cases - Multi-Stop Route Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="lib/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="navbar navbar-expand navbar-dark bg-dark px-3">
+    <span class="navbar-brand">Multi-Stop Route Planner</span>
+    <div class="navbar-nav">
+      <a class="nav-link" href="index.html">Planner</a>
+      <a class="nav-link active" href="tests.html">Test cases</a>
+      <a class="nav-link" href="benchmark.html">Experiments</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <h3>Test cases</h3>
+    <p>These run in your browser every time this page is opened. They call the same functions
+      (<code>js/tsp.js</code>) that the planner uses. The first few are small cases where I know the answer
+      by hand, the rest compare the planner with plain brute force on random places.</p>
+
+    <div id="summary" class="alert alert-secondary">Running...</div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead class="table-light">
+          <tr><th>#</th><th>What is tested</th><th>Input</th><th>Expected</th><th>Got</th><th>Result</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <p class="text-muted small">Distances in the hand-made cases are on flat paper (x, y in km) so they are easy to check with
+      Pythagoras. The random places use a fixed seed, so the numbers are the same every time.</p>
+  </div>
+
+  <script src="js/tsp.js"></script>
+  <script src="js/tests.js"></script>
+</body>
+</html>
