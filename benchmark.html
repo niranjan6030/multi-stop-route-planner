@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Experiments - Multi-Stop Route Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="lib/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="navbar navbar-expand navbar-dark bg-dark px-3">
+    <span class="navbar-brand">Multi-Stop Route Planner</span>
+    <div class="navbar-nav">
+      <a class="nav-link" href="index.html">Planner</a>
+      <a class="nav-link" href="tests.html">Test cases</a>
+      <a class="nav-link active" href="benchmark.html">Experiments</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <h3>Experiments</h3>
+    <p>How long does each method take, and how good is its answer? The places are random points in a
+      20 km x 20 km square. Every row is an average over several random sets.</p>
+    <button class="btn btn-primary" id="runBtn">Run the experiments</button>
+    <span id="status" class="ms-2 text-muted"></span>
+
+    <h5>1. Few stops: exact methods against the quick method</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead class="table-light">
+          <tr><th rowspan="2">Stops</th><th rowspan="2" class="num">Possible orders (n!)</th>
+            <th colspan="4" class="text-center">Time for one answer (ms)</th>
+            <th colspan="2" class="text-center">Longer than the best route by</th></tr>
+          <tr><th class="num">Brute force</th><th class="num">With pruning</th><th class="num">Nearest neighbour</th><th class="num">NN + 2-opt</th>
+            <th class="num">Nearest neighbour</th><th class="num">NN + 2-opt</th></tr>
+        </thead>
+        <tbody id="smallRows"><tr><td colspan="8" class="text-muted">Press the button.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="chartbox"><canvas id="timeChart"></canvas></div>
+    <div class="chartbox"><canvas id="gapChart"></canvas></div>
+
+    <h5>2. Many stops: only the quick method can do these</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead class="table-light">
+          <tr><th>Stops</th><th class="num">Nearest neighbour (ms)</th><th class="num">2-opt (ms)</th><th class="num">2-opt passes</th>
+            <th class="num">NN route (km)</th><th class="num">After 2-opt (km)</th><th class="num">Shorter by</th>
+            <th class="num">Numbers in the distance table</th></tr>
+        </thead>
+        <tbody id="largeRows"><tr><td colspan="8" class="text-muted">Press the button.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="lib/chart.umd.min.js"></script>
+  <script src="js/tsp.js"></script>
+  <script src="js/benchmark.js"></script>
+</body>
+</html>
