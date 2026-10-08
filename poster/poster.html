@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Poster - Multi-Stop Route Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  /* A3 landscape. Open in Chrome and print to PDF (or run make_poster.sh) */
+  @page { size: 420mm 297mm; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 420mm; height: 297mm;
+    font-family: Calibri, Carlito, Arial, sans-serif;
+    font-size: 3.1mm;
+    line-height: 1.27;
+    color: #111;
+    background: #e7ecf4;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    overflow: hidden;
+  }
+
+  .head {
+    height: 27mm;
+    background: #1f3864;
+    color: #fff;
+    padding: 3.5mm 9mm 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1.6mm solid #c55a11;
+  }
+  .head h1 { font-size: 10.5mm; margin: 0; line-height: 1.05; }
+  .head .sub { font-size: 4.9mm; color: #ffd966; margin-top: 1.2mm; }
+  .head .who { text-align: right; font-size: 3.9mm; line-height: 1.3; padding-top: 0.8mm; }
+  .head .who b { font-size: 4.9mm; }
+
+  .cols {
+    display: flex;
+    gap: 4.5mm;
+    padding: 4mm 7mm 0;
+    height: 262mm;
+  }
+  .col { flex: 1; display: flex; flex-direction: column; gap: 3.2mm; min-width: 0; }
+
+  .box { background: #fff; border: 0.35mm solid #1f3864; }
+  .box h2 {
+    margin: 0;
+    background: #1f3864;
+    color: #fff;
+    font-size: 4.1mm;
+    padding: 0.9mm 2.4mm 1mm;
+  }
+  .box .in { padding: 1.8mm 2.4mm 2mm; }
+  .box p { margin: 0 0 1.4mm; }
+  .box p:last-child { margin-bottom: 0; }
+  .box ul { margin: 0 0 1.2mm; padding-left: 4.2mm; }
+  .box li { margin-bottom: 0.5mm; }
+  h3 { font-size: 3.3mm; margin: 1.6mm 0 0.7mm; color: #1f3864; }
+  h3:first-child { margin-top: 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: 0.8mm 0 1.2mm; }
+  th, td { border: 0.25mm solid #7f8fa9; padding: 0.55mm 1.2mm; text-align: left; vertical-align: top; }
+  th { background: #dce6f2; }
+  td.r, th.r { text-align: right; white-space: nowrap; }
+  td.c, th.c { text-align: center; }
+  tr.chosen td { background: #fff2cc; font-weight: bold; }
+  .small { font-size: 2.75mm; }
+  .tiny { font-size: 2.5mm; color: #333; }
+  .ok { color: #2e7d32; font-weight: bold; }
+
+  .cap { font-size: 2.7mm; text-align: center; color: #222; margin-top: 0.6mm; }
+  .pair { display: flex; gap: 1.6mm; }
+  .pair > div { flex: 1; min-width: 0; }
+  .pair img { width: 100%; display: block; border: 0.25mm solid #555; }
+  .tag { font-weight: bold; text-align: center; font-size: 3.1mm; padding: 0.5mm 0; }
+  .tag.red { color: #c00000; }
+  .tag.blue { color: #0b5ed7; }
+
+  pre {
+    font-family: Consolas, Menlo, "Courier New", monospace;
+    font-size: 2.5mm;
+    line-height: 1.3;
+    background: #f2f2f2;
+    border: 0.25mm solid #bbb;
+    padding: 1.3mm 1.6mm;
+    margin: 1mm 0 0;
+    white-space: pre-wrap;
+  }
+  .note { background: #fff2cc; border: 0.25mm solid #d6b656; padding: 1.1mm 1.6mm; margin-top: 1.2mm; }
+  .chart { position: relative; height: 42mm; }
+  .foot {
+    height: 7mm; line-height: 7mm; padding: 0 9mm;
+    font-size: 2.9mm; color: #1f3864;
+    display: flex; justify-content: space-between;
+  }
+  svg text { font-family: Calibri, Carlito, Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div>
+    <h1>Multi-Stop Route Planner</h1>
+    <div class="sub">Finding the shortest order to visit many places with Nearest Neighbour + 2-opt</div>
+  </div>
+  <div class="who">
+    <b>Niranjan S</b><br>
+    BCA, CHRIST (Deemed to be University), Bengaluru<br>
+    October 2026
+  </div>
+</div>
+
+<div class="cols">
+
+  <!-- ================= column 1 ================= -->
+  <div class="col">
+
+    <div class="box">
+      <h2>1. The routing problem</h2>
+      <div class="in">
+        <p>Many people have a list of places to go to in one trip: a delivery boy with 12 parcels,
+          a shop owner dropping orders, a family giving wedding invitations to relatives' houses.
+          Google Maps shows the way from A to B, but <b>you have to decide the order of the stops yourself.</b>
+          A bad order means extra kilometres, petrol and time.</p>
+        <p><b>Problem:</b> given a starting place and <i>n</i> stops, find the order to visit every stop once
+          (and come back) so that the total distance is the smallest. This is the well known
+          <b>Travelling Salesman Problem (TSP)</b>.</p>
+        <div class="pair">
+          <div><div class="tag red">Order as typed: 77.3 km</div><img src="img/before.jpg"></div>
+          <div><div class="tag blue">Shortest order: 39.8 km</div><img src="img/after.jpg"></div>
+        </div>
+        <div class="cap">Same 9 places in Bengaluru (S = start at Dairy Circle). Screenshots from my prototype, real road distances.</div>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Why is it hard?</h2>
+      <div class="in">
+        <p><i>n</i> stops can be visited in <b><i>n</i>! different orders</b>, so checking all of them stops being possible very quickly.</p>
+        <table>
+          <tr><th>Stops</th><td class="r">3</td><td class="r">5</td><td class="r">8</td><td class="r">10</td><td class="r">15</td><td class="r">20</td></tr>
+          <tr><th>Orders</th><td class="r">6</td><td class="r">120</td><td class="r">40,320</td><td class="r">3.6 million</td><td class="r">1.3 &times; 10<sup>12</sup></td><td class="r">2.4 &times; 10<sup>18</sup></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>2. Inputs and outputs</h2>
+      <div class="in">
+        <table>
+          <tr><th style="width:17mm">Input</th><td>
+            &bull; Starting place and the stops (name, latitude, longitude). The user searches a place or clicks on the map.<br>
+            &bull; Round trip or one way.<br>
+            &bull; Distance table D, where D[i][j] = km from place i to place j. Road distances come from OpenStreetMap
+            (OSRM server). Without internet, straight line distance (haversine formula) is used.</td></tr>
+          <tr><th>Output</th><td>
+            &bull; The order to visit the stops.<br>
+            &bull; Total km and driving time, and km for every leg.<br>
+            &bull; Km saved compared to the order the user typed.<br>
+            &bull; Route drawn on the map and a link that opens it in Google Maps.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="box" style="flex:1">
+      <h2>Who can use it?</h2>
+      <div class="in">
+        <ul>
+          <li>Delivery partners and courier boys planning the day's drops.</li>
+          <li>Small shops (grocery, medical, gas cylinder, milk) doing home delivery.</li>
+          <li>Anyone with errands: bank, post office, tailor, market in one trip.</li>
+          <li>Tourists who want to cover many spots in one day.</li>
+        </ul>
+        <p>It is a web page, so it opens on any phone without installing anything.</p>
+        <p><b>What is different from a normal route finder:</b> it compares the order you typed with the best order and
+          tells you how many km you save, and it hands the final order to Google Maps so you can start driving.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= column 2 ================= -->
+  <div class="col">
+
+    <div class="box" style="flex:1">
+      <h2>3. The algorithm</h2>
+      <div class="in">
+        <h3>Step 1: Nearest Neighbour (build a first route)</h3>
+        <p>Start at home. Always go to the closest place that is not visited yet. It is fast, but it does not
+          look ahead, so the last places are far away and the route often crosses itself.</p>
+
+        <h3>Step 2: 2-opt (improve the route)</h3>
+        <p>Pick two links of the route, remove them and join the route the other way (the part in between
+          gets reversed). If the route is shorter now, keep the change. Repeat until no pair of links gives
+          an improvement.</p>
+
+        <h3>Step 3: Exact search, only when there are 10 stops or fewer</h3>
+        <p>Try every order using recursion, but give up on a half built route as soon as it is already longer
+          than the best complete route found so far (<b>pruning</b>). The 2-opt route is given as the first
+          "best", so most orders are thrown away early.</p>
+
+        <h3>Worked example (6 places on a km grid, H = home)</h3>
+        <div class="pair">
+          <div>
+            <svg viewBox="10 -5 86 70" width="100%">
+              <g stroke="#d9d9d9" stroke-width="0.3">
+                <path d="M20 -4V62M30 -4V62M40 -4V62M50 -4V62M60 -4V62M70 -4V62M80 -4V62M90 -4V62M12 56H94M12 46H94M12 36H94M12 26H94M12 16H94M12 6H94"/>
+              </g>
+              <polyline points="80,46 70,36" fill="none" stroke="#444" stroke-width="1.1"/>
+              <polyline points="50,26 70,6 80,6" fill="none" stroke="#444" stroke-width="1.1"/>
+              <polyline points="20,56 80,46" fill="none" stroke="#444" stroke-width="1.1"/>
+              <line x1="70" y1="36" x2="50" y2="26" stroke="#c00000" stroke-width="1.5" stroke-dasharray="3 1.6"/>
+              <line x1="80" y1="6" x2="20" y2="56" stroke="#c00000" stroke-width="1.5" stroke-dasharray="3 1.6"/>
+              <g fill="#1f3864"><circle cx="50" cy="26" r="2.2"/><circle cx="20" cy="56" r="2.2"/><circle cx="80" cy="6" r="2.2"/><circle cx="70" cy="36" r="2.2"/><circle cx="70" cy="6" r="2.2"/></g>
+              <rect x="77.4" y="43.4" width="5.2" height="5.2" fill="#2e7d32"/>
+              <g font-size="5" font-weight="bold" fill="#111">
+                <text x="84.5" y="48.5">H</text><text x="44" y="24.5">A</text><text x="14" y="54">B</text>
+                <text x="83.5" y="7.5">C</text><text x="63.5" y="40.5">D</text><text x="65.5" y="2.5">E</text>
+              </g>
+              <g font-size="3.6" fill="#c00000"><text x="60" y="29">2.24</text><text x="27" y="41">7.81</text></g>
+            </svg>
+            <div class="cap"><b>After Step 1:</b> H-D-A-E-C-B-H<br><b>21.37 km</b>, links D-A and C-B cross</div>
+          </div>
+          <div>
+            <svg viewBox="10 -5 86 70" width="100%">
+              <g stroke="#d9d9d9" stroke-width="0.3">
+                <path d="M20 -4V62M30 -4V62M40 -4V62M50 -4V62M60 -4V62M70 -4V62M80 -4V62M90 -4V62M12 56H94M12 46H94M12 36H94M12 26H94M12 16H94M12 6H94"/>
+              </g>
+              <polyline points="80,46 70,36" fill="none" stroke="#444" stroke-width="1.1"/>
+              <polyline points="80,6 70,6 50,26" fill="none" stroke="#444" stroke-width="1.1"/>
+              <polyline points="20,56 80,46" fill="none" stroke="#444" stroke-width="1.1"/>
+              <line x1="70" y1="36" x2="80" y2="6" stroke="#0b5ed7" stroke-width="1.6"/>
+              <line x1="50" y1="26" x2="20" y2="56" stroke="#0b5ed7" stroke-width="1.6"/>
+              <g fill="#1f3864"><circle cx="50" cy="26" r="2.2"/><circle cx="20" cy="56" r="2.2"/><circle cx="80" cy="6" r="2.2"/><circle cx="70" cy="36" r="2.2"/><circle cx="70" cy="6" r="2.2"/></g>
+              <rect x="77.4" y="43.4" width="5.2" height="5.2" fill="#2e7d32"/>
+              <g font-size="5" font-weight="bold" fill="#111">
+                <text x="84.5" y="48.5">H</text><text x="44" y="24.5">A</text><text x="14" y="54">B</text>
+                <text x="83.5" y="7.5">C</text><text x="63.5" y="39.5">D</text><text x="65.5" y="2.5">E</text>
+              </g>
+              <g font-size="3.6" fill="#0b5ed7"><text x="77" y="23">3.16</text><text x="27" y="38">4.24</text></g>
+            </svg>
+            <div class="cap"><b>After Step 2:</b> H-D-C-E-A-B-H<br><b>18.73 km</b>, part A-E-C reversed</div>
+          </div>
+        </div>
+        <p style="margin-top:1.2mm">2-opt removed D-A and C-B (2.24 + 7.81 = 10.05 km) and added D-C and A-B
+          (3.16 + 4.24 = 7.40 km), so the route became <b>2.64 km shorter</b>. Trying all 5! = 120 orders confirms that
+          18.73 km is the best possible.</p>
+
+        <h3>Pseudocode</h3>
+<pre>route = [start]                            // Step 1
+while some place is not visited
+    add the nearest unvisited place to route
+repeat                                     // Step 2
+    for every pair of positions i &lt; j in route
+        if reversing route[i..j] is shorter, reverse it
+until one full pass changes nothing
+if stops &lt;= 10                             // Step 3
+    route = tryEveryOrder(bestSoFar = route)</pre>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>4. Why this algorithm?</h2>
+      <div class="in">
+        <table class="small">
+          <tr><th style="width:26mm">Method</th><th>Best route?</th><th style="width:17mm">Time</th><th>What I found</th></tr>
+          <tr><td>Try every order (brute force)</td><td>Yes</td><td>O(n!)</td><td>149 ms at 10 stops. 15 stops would need about 15 hours.</td></tr>
+          <tr><td>Every order + pruning</td><td>Yes</td><td>O(n!) worst</td><td>9 ms at 10 stops, 154 ms at 12. Too slow after that.</td></tr>
+          <tr><td>Held-Karp (dynamic programming)</td><td>Yes</td><td>O(n&sup2; 2<sup>n</sup>)</td><td>Needs O(n 2<sup>n</sup>) memory. Not tried.</td></tr>
+          <tr><td>Nearest neighbour only</td><td>No</td><td>O(n&sup2;)</td><td>Instant, but about 14% longer than the best.</td></tr>
+          <tr class="chosen"><td>Nearest neighbour + 2-opt (chosen)</td><td>Almost</td><td>O(n&sup2;) a pass</td><td>About 1% longer than the best, under 0.001 ms.</td></tr>
+        </table>
+        <p class="small">So the planner gives the exact answer when that is cheap (10 stops or fewer) and a near-best answer instantly when it is not.
+          <b>Why not Dijkstra or A*?</b> They find the shortest path between two places. The OSRM server already does that
+          when it gives me the road distance of each pair. They cannot decide the <i>order</i> of the stops.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= column 3 ================= -->
+  <div class="col">
+
+    <div class="box">
+      <h2>5. The prototype</h2>
+      <div class="in">
+        <div style="display:flex; gap:2.2mm">
+          <div style="width:50mm; flex:none">
+            <img src="img/result.png" style="width:100%; display:block; border:0.25mm solid #555">
+            <div class="cap">Result for the 9 places shown in section 1</div>
+            <p class="small" style="margin-top:1.4mm">For these 8 stops there are 40,320 possible orders. With pruning the search
+              had to finish only 102 of them to be sure of the answer.</p>
+          </div>
+          <div>
+            <p>A web page written in HTML and plain JavaScript with the Leaflet map library.</p>
+            <ul>
+              <li>Add places by search or by clicking the map.</li>
+              <li>Real road distances from OpenStreetMap, straight line if offline.</li>
+              <li>Round trip or one way.</li>
+              <li>Shows the km saved and the km and minutes of every leg.</li>
+              <li>Button to open the final order in Google Maps for navigation.</li>
+              <li>A link switches the map between "my order" (red) and "shortest order" (blue).</li>
+            </ul>
+          </div>
+        </div>
+        <p class="small" style="margin-top:1.4mm"><b>Files:</b> index.html (planner), js/tsp.js (the algorithms, about 200 lines),
+          tests.html (test cases), benchmark.html (experiments).</p>
+      </div>
+    </div>
+
+    <div class="box" style="flex:1">
+      <h2>6. Test cases</h2>
+      <div class="in">
+        <p>18 test cases run in the browser on the same code the planner uses. The first ones have answers
+          I can work out by hand, the others compare with plain brute force.</p>
+        <table class="small">
+          <tr><th>Test</th><th>Expected</th><th>Got</th><th></th></tr>
+          <tr><td>Only the start, no stops</td><td>0 km</td><td>0 km</td><td class="ok">Pass</td></tr>
+          <tr><td>One stop 3 km away, round trip</td><td>6.00 km</td><td>6.00 km</td><td class="ok">Pass</td></tr>
+          <tr><td>Stops on one straight road at km 5, 2, 8, 3 (one way)</td><td>order 2, 3, 5, 8 = 8.00 km</td><td>2, 3, 5, 8 = 8.00 km</td><td class="ok">Pass</td></tr>
+          <tr><td>Same road, round trip</td><td>16.00 km</td><td>16.00 km</td><td class="ok">Pass</td></tr>
+          <tr><td>Four corners of a 1 km square typed criss-cross (4.83 km)</td><td>4.00 km</td><td>4.00 km</td><td class="ok">Pass</td></tr>
+          <tr><td>Worked example, nearest neighbour only</td><td>21.37 km</td><td>21.37 km</td><td class="ok">Pass</td></tr>
+          <tr><td>Worked example, after 2-opt</td><td>18.73 km</td><td>18.73 km</td><td class="ok">Pass</td></tr>
+          <tr><td>Worked example, all 120 orders tried</td><td>18.73 km</td><td>18.73 km</td><td class="ok">Pass</td></tr>
+          <tr><td>Pruning must not change the answer (40 random sets of 8 stops)</td><td>40 of 40 same</td><td>40 of 40 same</td><td class="ok">Pass</td></tr>
+          <tr><td>2-opt never makes a route longer (200 random sets)</td><td>0 longer</td><td>0 longer</td><td class="ok">Pass</td></tr>
+          <tr><td>Every place visited exactly once (200 routes, 3 to 80 places)</td><td>200 valid</td><td>200 valid</td><td class="ok">Pass</td></tr>
+          <tr><td>Two stops at exactly the same spot</td><td>valid, 12.00 km</td><td>valid, 12.00 km</td><td class="ok">Pass</td></tr>
+          <tr><td>One way trip never longer than round trip (100 sets)</td><td>100 of 100</td><td>100 of 100</td><td class="ok">Pass</td></tr>
+          <tr><td>One-way street: A to B 2 km, B to A 4 km</td><td>averaged to 3 km</td><td>3 km both ways</td><td class="ok">Pass</td></tr>
+          <tr><td>Bengaluru example against brute force (40,320 orders)</td><td>same km</td><td>27.8 = 27.8 km</td><td class="ok">Pass</td></tr>
+          <tr><td>10 stops use exact search, 11 stops switch to 2-opt</td><td>exact / 2-opt</td><td>exact / 2-opt</td><td class="ok">Pass</td></tr>
+          <tr><td>300 places still answer quickly</td><td>under 1 second</td><td>about 1 ms</td><td class="ok">Pass</td></tr>
+        </table>
+        <div class="note"><b>Result: 18 of 18 test cases passed.</b> Nearest neighbour + 2-opt was also compared with the exact
+          answer on 60 random sets of 9 stops: it found the best route in 44 of them and was 0.73% longer on average.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= column 4 ================= -->
+  <div class="col">
+
+    <div class="box">
+      <h2>7. Time and space complexity</h2>
+      <div class="in">
+        <table class="small">
+          <tr><th>Part</th><th>Time</th><th>Extra space</th></tr>
+          <tr><td>Distance table</td><td>O(n&sup2;)</td><td>O(n&sup2;)</td></tr>
+          <tr><td>Nearest neighbour</td><td>O(n&sup2;)</td><td>O(n) visited list</td></tr>
+          <tr><td>2-opt</td><td>O(n&sup2;) per pass, p passes</td><td>O(n), a copy of the route</td></tr>
+          <tr><td>Exact search with pruning</td><td>O(n!) worst case</td><td>O(n) recursion depth</td></tr>
+          <tr class="chosen"><td>Planner, more than 10 stops</td><td>O(p &middot; n&sup2;)</td><td>O(n&sup2;)</td></tr>
+        </table>
+        <p class="small">n = number of places. In my runs p was only 3 to 6 passes, even for 800 stops.</p>
+      </div>
+    </div>
+
+    <div class="box" style="flex:1">
+      <h2>8. Experimental results</h2>
+      <div class="in">
+        <p class="small">Random places in a 20 km &times; 20 km square. Every point is the average of 20 random sets (5 for the last table). Measured in Chrome 154 on a MacBook Air (M4).</p>
+
+        <h3>Time for one answer (log scale)</h3>
+        <div class="chart"><canvas id="timeChart"></canvas></div>
+
+        <h3>How much longer than the best possible route?</h3>
+        <div class="chart" style="height:32mm"><canvas id="gapChart"></canvas></div>
+
+        <h3>Many stops (only the quick method can do this)</h3>
+        <table class="small">
+          <tr><th class="r">Stops</th><th class="r">Nearest neighbour</th><th class="r">2-opt</th><th class="r">Passes</th><th class="r">2-opt made it shorter by</th></tr>
+          <tr><td class="r">100</td><td class="r">0.014 ms</td><td class="r">0.072 ms</td><td class="r">4.8</td><td class="r">13.9%</td></tr>
+          <tr><td class="r">200</td><td class="r">0.058 ms</td><td class="r">0.280 ms</td><td class="r">4.6</td><td class="r">13.3%</td></tr>
+          <tr><td class="r">400</td><td class="r">0.234 ms</td><td class="r">1.2 ms</td><td class="r">5.0</td><td class="r">13.5%</td></tr>
+          <tr><td class="r">800</td><td class="r">0.935 ms</td><td class="r">5.6 ms</td><td class="r">6.0</td><td class="r">14.2%</td></tr>
+        </table>
+        <ul class="small" style="margin-top:1mm">
+          <li><b>Brute force</b> gets about n times slower with every extra stop (13.8 ms at 9 stops, 149 ms at 10), like n! says.</li>
+          <li><b>Doubling the stops</b> makes nearest neighbour 4 times slower (0.058, 0.234, 0.935 ms). That matches O(n&sup2;).</li>
+          <li><b>Quality:</b> nearest neighbour alone is 4 to 14% longer than the best route, after 2-opt about 1%.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>9. Limits and what next</h2>
+      <div class="in small">
+        <p>Driving time is without live traffic. Above 10 stops the route is very good but not guaranteed to be the best.
+          Only one vehicle, and no shop timings. Next I want to add opening times of the places and a second
+          improvement move (or-opt).</p>
+        <p class="tiny"><b>References:</b> G. A. Croes, "A method for solving traveling-salesman problems", Operations Research, 1958 (2-opt).
+          Cormen et al., Introduction to Algorithms, section on the travelling-salesman problem.
+          Project OSRM (project-osrm.org). Leaflet (leafletjs.com). OpenStreetMap contributors.
+          Existing tools I looked at: OptiMap (gebweb.net/optimap), tspvis.com.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="foot">
+  <span>Prototype: open index.html in a browser &nbsp;|&nbsp; Test cases: tests.html &nbsp;|&nbsp; Experiments: benchmark.html</span>
+  <span>Map data &copy; OpenStreetMap contributors</span>
+</div>
+
+<script src="../lib/chart.umd.min.js"></script>
+<script>
+  // numbers copied from benchmark.html (Chrome 154, MacBook Air M4)
+  var stops  = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+  var brute  = [0.0008, 0.0036, 0.022, 0.167, 1.4, 13.8, 149, null, null];
+  var pruned = [0.0007, 0.0026, 0.012, 0.055, 0.277, 1.4, 9.2, 58.1, 154];
+  var twoOpt = [0.0002, 0.0002, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008];
+  var gapNN  = [3.9, 3.8, 6.9, 6.5, 8.4, 12.8, 14.0, 14.2, 12.8];
+  var gapTwo = [0.36, 0.08, 0.10, 0.10, 0.12, 1.12, 0.67, 1.11, 1.15];
+
+  Chart.defaults.font.family = "Calibri, Carlito, Arial, sans-serif";
+  Chart.defaults.font.size = 10;
+  Chart.defaults.color = "#111";
+  Chart.defaults.animation = false;
+
+  function line(label, data, colour, shape) {
+    return { label: label, data: data, borderColor: colour, backgroundColor: colour, borderWidth: 2, pointRadius: 3, pointStyle: shape };
+  }
+
+  new Chart(document.getElementById("timeChart"), {
+    type: "line",
+    data: { labels: stops, datasets: [
+      line("Brute force", brute, "#eb6834", "rect"),
+      line("Every order + pruning", pruned, "#2a78d6", "triangle"),
+      line("Nearest neighbour + 2-opt", twoOpt, "#1baf7a", "circle")
+    ] },
+    options: {
+      maintainAspectRatio: false, devicePixelRatio: 4,
+      plugins: { legend: { labels: { usePointStyle: true, boxWidth: 5, boxHeight: 5, padding: 8 } } },
+      scales: {
+        y: { type: "logarithmic", title: { display: true, text: "milliseconds" },
+             ticks: { callback: function (v) { return [0.0001, 0.001, 0.01, 0.1, 1, 10, 100].indexOf(v) !== -1 ? v : ""; } } },
+        x: { title: { display: true, text: "number of stops" } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("gapChart"), {
+    type: "bar",
+    data: { labels: stops, datasets: [
+      { label: "Nearest neighbour only", data: gapNN, backgroundColor: "#eda100" },
+      { label: "Nearest neighbour + 2-opt", data: gapTwo, backgroundColor: "#1baf7a" }
+    ] },
+    options: {
+      maintainAspectRatio: false, devicePixelRatio: 4,
+      plugins: { legend: { labels: { boxWidth: 10, padding: 8 } } },
+      scales: {
+        y: { title: { display: true, text: "% longer than best" } },
+        x: { title: { display: true, text: "number of stops" } }
+      }
+    }
+  });
+</script>
+</body>
+</html>
