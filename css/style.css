@@ -1,0 +1,53 @@
+/* Bootstrap does most of the styling, this file only has the extra bits */
+
+body {
+  font-family: Poppins, Arial, sans-serif;
+  font-size: 15px;
+}
+
+.navbar-brand { font-weight: 600; }
+
+/* planner page */
+#map { height: calc(100vh - 56px); }
+.panel {
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  border-right: 1px solid #ccc;
+}
+/* phone: map on top, the form below it, menu links under the title */
+@media (max-width: 767px) {
+  #map { height: 45vh; }
+  .panel { height: auto; border-right: 0; }
+  .navbar { flex-wrap: wrap; padding-top: 6px; padding-bottom: 2px; }
+  .navbar-brand { width: 100%; padding-bottom: 0; }
+  .navbar .nav-link { padding-left: 0; padding-right: 16px; font-size: 14px; }
+}
+
+#stopList .list-group-item { padding: 6px 10px; font-size: 14px; }
+#stopList .remove { cursor: pointer; color: #dc3545; font-weight: 600; border: 0; background: none; }
+#searchResults .list-group-item { padding: 5px 10px; font-size: 13px; cursor: pointer; }
+
+.pin {
+  background: #0d6efd;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  text-align: center;
+  font: 600 13px/22px Arial, sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.pin.start { background: #198754; }
+
+.saving { font-size: 17px; }
+#result table { font-size: 14px; }
+#result .how { font-size: 13px; color: #6c757d; }
+
+/* test and experiment pages */
+.page { max-width: 1000px; margin: 0 auto; padding: 20px 15px 60px; }
+.page h3 { margin-top: 10px; }
+.page h5 { margin-top: 30px; }
+.page table { font-size: 14px; }
+.pass { color: #198754; font-weight: 600; }
+.fail { color: #dc3545; font-weight: 600; }
+.chartbox { position: relative; height: 340px; margin-bottom: 8px; }
+td.num, th.num { text-align: right; }

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Multi-Stop Route Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="lib/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="lib/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="navbar navbar-expand navbar-dark bg-dark px-3">
+    <span class="navbar-brand">Multi-Stop Route Planner</span>
+    <div class="navbar-nav">
+      <a class="nav-link active" href="index.html">Planner</a>
+      <a class="nav-link" href="tests.html">Test cases</a>
+      <a class="nav-link" href="benchmark.html">Experiments</a>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <div class="row">
+
+      <div class="col-md-4 panel order-2 order-md-1">
+        <h5 class="mt-3">Many places to go? Find the shortest order.</h5>
+        <p class="text-muted small">Add the place you start from first, then all the places you have to visit.
+          The planner works out in which order to visit them so that you travel the least.</p>
+
+        <div class="input-group mb-1">
+          <input type="text" id="searchBox" class="form-control" placeholder="Search a place, e.g. Lalbagh Bengaluru">
+          <button class="btn btn-secondary" id="searchBtn">Search</button>
+        </div>
+        <div id="searchResults" class="list-group mb-2"></div>
+        <p class="small text-muted mb-2">or click anywhere on the map to add a place.</p>
+        <button class="btn btn-outline-secondary btn-sm mb-3" id="exampleBtn">Load an example (9 places in Bengaluru)</button>
+
+        <h6>Your places <span class="text-muted fw-normal" id="count"></span></h6>
+        <ul id="stopList" class="list-group mb-3"></ul>
+
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="roundTrip" checked>
+          <label class="form-check-label" for="roundTrip">Come back to the start at the end</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="useRoads" checked>
+          <label class="form-check-label" for="useRoads">Use real road distances (needs internet)</label>
+        </div>
+
+        <div class="my-3">
+          <button class="btn btn-primary" id="goBtn">Find best order</button>
+          <button class="btn btn-outline-danger" id="clearBtn">Clear all</button>
+        </div>
+
+        <div id="message"></div>
+        <div id="result"></div>
+
+        <p class="small text-muted mt-4">Road distances and the map are from OpenStreetMap (OSRM routing server).
+          Driving time is without traffic. Student project, please check the route before you leave.</p>
+      </div>
+
+      <div class="col-md-8 p-0 order-1 order-md-2">
+        <div id="map"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="lib/leaflet/leaflet.js"></script>
+  <script src="js/tsp.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
