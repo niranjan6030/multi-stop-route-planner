@@ -77,10 +77,12 @@
     <h3>Why is it hard?</h3>
     <p>The obvious idea is to try every possible order and keep the shortest. The trouble is that
       <i>n</i> stops can be visited in <i>n</i>! (n factorial) different orders.</p>
+    <div class="table-responsive">
     <table class="table table-bordered text-end" style="max-width:640px">
       <tr><th class="text-start">Stops</th><td>3</td><td>5</td><td>8</td><td>10</td><td>15</td><td>20</td></tr>
       <tr><th class="text-start">Possible orders</th><td>6</td><td>120</td><td>40,320</td><td>3.6 million</td><td>1.3 &times; 10<sup>12</sup></td><td>2.4 &times; 10<sup>18</sup></td></tr>
     </table>
+    </div>
     <p>Ten stops are still fine for a computer. Twenty stops are not, as I measured later.</p>
 
     <h2>2. The algorithm</h2>
