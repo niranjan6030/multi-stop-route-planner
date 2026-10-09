@@ -51,3 +51,21 @@ body {
 .fail { color: #dc3545; font-weight: 600; }
 .chartbox { position: relative; height: 340px; margin-bottom: 8px; }
 td.num, th.num { text-align: right; }
+
+/* blog page */
+.blog { max-width: 780px; margin: 0 auto; padding: 28px 16px 70px; font-family: Georgia, "Times New Roman", serif; font-size: 18px; line-height: 1.65; color: #222; }
+.blog h1 { font-family: Poppins, Arial, sans-serif; font-size: 31px; font-weight: 600; line-height: 1.25; }
+.blog h2 { font-family: Poppins, Arial, sans-serif; font-size: 24px; font-weight: 600; margin: 42px 0 12px; padding-bottom: 5px; border-bottom: 1px solid #ccc; }
+.blog h3 { font-family: Poppins, Arial, sans-serif; font-size: 19px; font-weight: 600; margin: 26px 0 8px; }
+.blog .by { font-family: Poppins, Arial, sans-serif; font-size: 14px; color: #666; margin-bottom: 26px; }
+.blog table { font-family: Poppins, Arial, sans-serif; font-size: 14px; }
+.blog td ul { margin: 0; padding-left: 18px; }
+.blog pre { background: #f6f6f6; border: 1px solid #ddd; padding: 12px 14px; font-size: 13.5px; line-height: 1.45; overflow-x: auto; }
+.blog code { color: #b02a5b; }
+.blog pre code { color: #222; }
+.blog .two { display: flex; gap: 16px; margin: 14px 0; }
+.blog .two > * { flex: 1; min-width: 0; margin: 0; }
+.blog figure img { width: 100%; border: 1px solid #999; }
+.blog figcaption { font-family: Poppins, Arial, sans-serif; font-size: 14px; text-align: center; margin-top: 5px; }
+.blog .refs li { font-size: 16px; }
+@media (max-width: 600px) { .blog .two { display: block; } .blog .two > * { margin-bottom: 14px; } .blog h1 { font-size: 25px; } }

@@ -11,6 +11,8 @@ search when there are 10 stops or fewer.
 
 **Try it:** https://niranjan6030.github.io/multi-stop-route-planner/
 
+Blog post that explains everything: https://niranjan6030.github.io/multi-stop-route-planner/blog.html
+
 Poster: [poster/poster.pdf](poster/poster.pdf)
 
 ## How to run
@@ -32,6 +34,7 @@ Click **Load an example** on the page to try it with 9 places in Bengaluru.
 |---|---|
 | `index.html`, `js/app.js` | the planner page (map, list of places, result) |
 | `js/tsp.js` | the algorithms. Everything else uses this file |
+| `blog.html` | the write-up: problem, algorithm, tests, complexity, experiments |
 | `tests.html`, `js/tests.js` | 18 test cases, they run when the page opens |
 | `benchmark.html`, `js/benchmark.js` | timing and quality experiments with charts |
 | `poster/` | the poster (HTML source, PDF, PNG) and the screenshots used in it |

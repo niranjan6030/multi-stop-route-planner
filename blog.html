@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How I built a multi-stop route planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="lib/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="navbar navbar-expand navbar-dark bg-dark px-3">
+    <span class="navbar-brand">Multi-Stop Route Planner</span>
+    <div class="navbar-nav">
+      <a class="nav-link" href="index.html">Planner</a>
+      <a class="nav-link active" href="blog.html">Blog</a>
+      <a class="nav-link" href="tests.html">Test cases</a>
+      <a class="nav-link" href="benchmark.html">Experiments</a>
+    </div>
+  </nav>
+
+  <div class="blog">
+
+    <h1>Many places to go, which one first? How I built a multi-stop route planner</h1>
+    <p class="by">Niranjan S &nbsp;|&nbsp; BCA, CHRIST (Deemed to be University), Bengaluru &nbsp;|&nbsp; October 2026</p>
+
+    <p>For my routing assignment I wanted to make something that a normal person could actually use, not
+      only a demo of an algorithm. So I picked a problem that almost everyone has had: you have a list of
+      places to go to in one trip, and you do not know in which order to visit them.</p>
+
+    <p>This post explains the problem, the algorithm I used, how I tested it and how fast it is.
+      You can try the working prototype here:
+      <a href="index.html"><b>open the route planner</b></a>.</p>
+
+    <h2>1. The problem</h2>
+
+    <p>Think of a delivery boy with 12 parcels, a shop owner who drops orders at customers' houses, or a
+      family going around the city giving wedding invitations. Google Maps is very good at showing the way
+      from A to B. But when there are many stops, <b>the order of the stops is left to you</b>, and a bad
+      order means a lot of extra kilometres, petrol and time.</p>
+
+    <p>Here is an example from my prototype. These are the same 9 places in Bengaluru. On the left I
+      visit them in the order I typed them. On the right is the order my planner found.</p>
+
+    <div class="two">
+      <figure><img src="poster/img/before.jpg" alt="Route in the order typed"><figcaption><b style="color:#c00000">Order as typed: 77.3 km</b></figcaption></figure>
+      <figure><img src="poster/img/after.jpg" alt="Route in the shortest order"><figcaption><b style="color:#0b5ed7">Shortest order: 39.8 km</b></figcaption></figure>
+    </div>
+
+    <p>That is 37.5 km saved (48%) without leaving out any place.</p>
+
+    <p>In computer science this is called the <b>Travelling Salesman Problem (TSP)</b>: given a starting
+      place and <i>n</i> stops, find the order that visits every stop once and comes back to the start
+      with the smallest total distance.</p>
+
+    <h3>Inputs and outputs</h3>
+    <table class="table table-bordered">
+      <tr><th style="width:110px">Input</th><td>
+        <ul>
+          <li>The starting place and the stops. Each one has a name, latitude and longitude. The user
+            searches for a place or clicks on the map.</li>
+          <li>Round trip (come back to the start) or one way.</li>
+          <li>A distance table <code>D</code> where <code>D[i][j]</code> is the km from place i to place j.
+            The planner gets real road distances from OpenStreetMap (through the OSRM server) in one request.
+            If there is no internet it uses straight line distance (haversine formula).</li>
+        </ul></td></tr>
+      <tr><th>Output</th><td>
+        <ul>
+          <li>The order to visit the stops.</li>
+          <li>Total km and driving time, and the km and minutes of every leg.</li>
+          <li>How many km are saved compared to the order the user typed.</li>
+          <li>The route drawn on the map, and a button that opens it in Google Maps.</li>
+        </ul></td></tr>
+    </table>
+
+    <h3>Why is it hard?</h3>
+    <p>The obvious idea is to try every possible order and keep the shortest. The trouble is that
+      <i>n</i> stops can be visited in <i>n</i>! (n factorial) different orders.</p>
+    <table class="table table-bordered text-end" style="max-width:640px">
+      <tr><th class="text-start">Stops</th><td>3</td><td>5</td><td>8</td><td>10</td><td>15</td><td>20</td></tr>
+      <tr><th class="text-start">Possible orders</th><td>6</td><td>120</td><td>40,320</td><td>3.6 million</td><td>1.3 &times; 10<sup>12</sup></td><td>2.4 &times; 10<sup>18</sup></td></tr>
+    </table>
+    <p>Ten stops are still fine for a computer. Twenty stops are not, as I measured later.</p>
+
+    <h2>2. The algorithm</h2>
+
+    <p>I use two simple methods one after the other, and an exact check when the list is small.
+      All of it is in one file, <a href="js/tsp.js">js/tsp.js</a>, about 200 lines of plain JavaScript.
+      Place 0 is always the start.</p>
+
+    <h3>Step 1: Nearest neighbour (build a first route)</h3>
+    <p>Start at home. Always go to the closest place that is not visited yet. That is all.</p>
+<pre><code>function nearestNeighbour(D) {
+  var n = D.length;
+  var visited = [];
+  for (var i = 0; i &lt; n; i++) visited.push(false);
+
+  var route = [0];
+  visited[0] = true;
+  var at = 0;
+
+  for (var step = 1; step &lt; n; step++) {
+    var next = -1;
+    for (var j = 0; j &lt; n; j++) {
+      if (!visited[j] &amp;&amp; (next === -1 || D[at][j] &lt; D[at][next])) next = j;
+    }
+    visited[next] = true;
+    route.push(next);
+    at = next;
+  }
+  return route;
+}</code></pre>
+    <p>It is very fast, but it does not look ahead. It keeps taking the easy nearby places, and at the end
+      the last places are far away. The route often crosses over itself.</p>
+
+    <h3>Step 2: 2-opt (improve the route)</h3>
+    <p>2-opt takes a route and tries to make it better. It picks two links of the route, removes them and
+      joins the route the other way, which reverses the part in between. If the route is shorter now, the
+      change is kept. It repeats this for every pair of links until one full pass finds nothing to improve.</p>
+    <p>The nice thing is that reversing a part only changes two links, so I do not have to add up the
+      whole route again. If <code>a-b</code> and <code>c-d</code> are the two links, I only check this:</p>
+<pre><code>change = D[a][c] + D[b][d] - D[a][b] - D[c][d];
+if (change &lt; 0) {
+  // reverse the part of the route between b and c
+}</code></pre>
+
+    <h3>A small example</h3>
+    <p>Six places on a km grid, H is home. Nearest neighbour gives the route on the left. You can see the
+      two red links crossing. 2-opt removes them and adds the two blue ones.</p>
+
+    <div class="two">
+      <figure>
+        <svg viewBox="10 -5 86 70" width="100%">
+          <g stroke="#d9d9d9" stroke-width="0.3"><path d="M20 -4V62M30 -4V62M40 -4V62M50 -4V62M60 -4V62M70 -4V62M80 -4V62M90 -4V62M12 56H94M12 46H94M12 36H94M12 26H94M12 16H94M12 6H94"/></g>
+          <g stroke="#444" stroke-width="1.1" fill="none"><line x1="80" y1="46" x2="70" y2="36"/><polyline points="50,26 70,6 80,6"/><line x1="20" y1="56" x2="80" y2="46"/></g>
+          <line x1="70" y1="36" x2="50" y2="26" stroke="#c00000" stroke-width="1.5" stroke-dasharray="3 1.6"/>
+          <line x1="80" y1="6" x2="20" y2="56" stroke="#c00000" stroke-width="1.5" stroke-dasharray="3 1.6"/>
+          <g fill="#1f3864"><circle cx="50" cy="26" r="2.2"/><circle cx="20" cy="56" r="2.2"/><circle cx="80" cy="6" r="2.2"/><circle cx="70" cy="36" r="2.2"/><circle cx="70" cy="6" r="2.2"/></g>
+          <rect x="77.4" y="43.4" width="5.2" height="5.2" fill="#2e7d32"/>
+          <g font-size="5" font-weight="bold" fill="#111" font-family="Arial"><text x="84.5" y="48.5">H</text><text x="44" y="24.5">A</text><text x="14" y="54">B</text><text x="83.5" y="7.5">C</text><text x="63.5" y="40.5">D</text><text x="65.5" y="2.5">E</text></g>
+        </svg>
+        <figcaption>After step 1: H-D-A-E-C-B-H, <b>21.37 km</b></figcaption>
+      </figure>
+      <figure>
+        <svg viewBox="10 -5 86 70" width="100%">
+          <g stroke="#d9d9d9" stroke-width="0.3"><path d="M20 -4V62M30 -4V62M40 -4V62M50 -4V62M60 -4V62M70 -4V62M80 -4V62M90 -4V62M12 56H94M12 46H94M12 36H94M12 26H94M12 16H94M12 6H94"/></g>
+          <g stroke="#444" stroke-width="1.1" fill="none"><line x1="80" y1="46" x2="70" y2="36"/><polyline points="80,6 70,6 50,26"/><line x1="20" y1="56" x2="80" y2="46"/></g>
+          <line x1="70" y1="36" x2="80" y2="6" stroke="#0b5ed7" stroke-width="1.6"/>
+          <line x1="50" y1="26" x2="20" y2="56" stroke="#0b5ed7" stroke-width="1.6"/>
+          <g fill="#1f3864"><circle cx="50" cy="26" r="2.2"/><circle cx="20" cy="56" r="2.2"/><circle cx="80" cy="6" r="2.2"/><circle cx="70" cy="36" r="2.2"/><circle cx="70" cy="6" r="2.2"/></g>
+          <rect x="77.4" y="43.4" width="5.2" height="5.2" fill="#2e7d32"/>
+          <g font-size="5" font-weight="bold" fill="#111" font-family="Arial"><text x="84.5" y="48.5">H</text><text x="44" y="24.5">A</text><text x="14" y="54">B</text><text x="83.5" y="7.5">C</text><text x="63.5" y="39.5">D</text><text x="65.5" y="2.5">E</text></g>
+        </svg>
+        <figcaption>After step 2: H-D-C-E-A-B-H, <b>18.73 km</b></figcaption>
+      </figure>
+    </div>
+
+    <p>The removed links D-A and C-B are 2.24 + 7.81 = 10.05 km. The new links D-C and A-B are
+      3.16 + 4.24 = 7.40 km. So the route became 2.64 km shorter. I also tried all 5! = 120 orders for
+      this example, and 18.73 km really is the best possible.</p>
+
+    <h3>Step 3: exact search, only for 10 stops or fewer</h3>
+    <p>When the list is small, trying every order is affordable, so the planner does it and gives the
+      guaranteed best answer. I made it faster with <b>pruning</b>: the search builds a route one place at
+      a time, and if the half built route is already longer than the best complete route found so far,
+      it stops and goes back, because it can never win. The 2-opt route is given to it as the first
+      "best", so most orders are thrown away early.</p>
+<pre><code>var len = lengthSoFar + D[last][next];
+if (prune &amp;&amp; len &gt;= bestLength) continue;     // already too long, skip this branch</code></pre>
+    <p>For the 9 places in the picture above (8 stops, 40,320 possible orders) the search had to finish
+      only 102 complete routes to be sure of the answer.</p>
+
+    <h2>3. The prototype</h2>
+
+    <p>The prototype is a web page made with HTML, plain JavaScript, Bootstrap and the Leaflet map library.
+      There is nothing to install and it works on a phone.
+      <a href="index.html"><b>Open it here</b></a> and press "Load an example" if you just want to see it work.</p>
+
+    <div class="two">
+      <figure><img src="poster/img/result.png" alt="Result panel of the planner"><figcaption>The result for the 9 places</figcaption></figure>
+      <div>
+        <ul>
+          <li>Add places by searching or by clicking on the map. The first place is the start.</li>
+          <li>Real road distances from OpenStreetMap, straight line distance when offline.</li>
+          <li>Round trip or one way.</li>
+          <li>Shows the km saved, and the km and minutes of every leg.</li>
+          <li>A link switches the map between "my order" (red) and "shortest order" (blue).</li>
+          <li>A button opens the final order in Google Maps so you can start driving.</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>One small detail: road distance from A to B is not exactly the same as from B to A because of
+      one-way streets. 2-opt reverses parts of the route, so it needs both directions to be equal. I take
+      the average of the two before running the algorithm, and at the end I check both directions of the
+      round trip with the real distances and show the shorter one.</p>
+
+    <h2>4. Test cases</h2>
+
+    <p>I wrote 18 test cases. They run in the browser on the same functions the planner uses, you can
+      see them on the <a href="tests.html">test cases page</a>. The first ones are small cases where I
+      know the answer by hand. The others compare my planner with plain brute force on random places.</p>
+
+    <div class="table-responsive">
+    <table class="table table-bordered table-sm">
+      <tr><th>What is tested</th><th>Expected</th><th>Got</th><th></th></tr>
+      <tr><td>Only the start, no stops</td><td>0 km</td><td>0 km</td><td class="pass">Pass</td></tr>
+      <tr><td>Stops on one straight road at km 5, 2, 8, 3 (one way)</td><td>order 2, 3, 5, 8 = 8.00 km</td><td>2, 3, 5, 8 = 8.00 km</td><td class="pass">Pass</td></tr>
+      <tr><td>Four corners of a 1 km square typed criss-cross (4.83 km)</td><td>4.00 km</td><td>4.00 km</td><td class="pass">Pass</td></tr>
+      <tr><td>The small example above, nearest neighbour only</td><td>21.37 km</td><td>21.37 km</td><td class="pass">Pass</td></tr>
+      <tr><td>The small example above, after 2-opt</td><td>18.73 km</td><td>18.73 km</td><td class="pass">Pass</td></tr>
+      <tr><td>Pruning must not change the answer (40 random sets of 8 stops)</td><td>40 of 40 same</td><td>40 of 40 same</td><td class="pass">Pass</td></tr>
+      <tr><td>2-opt never makes a route longer (200 random sets)</td><td>0 longer</td><td>0 longer</td><td class="pass">Pass</td></tr>
+      <tr><td>Every place visited exactly once (200 routes, 3 to 80 places)</td><td>200 valid</td><td>200 valid</td><td class="pass">Pass</td></tr>
+      <tr><td>Two stops at exactly the same spot</td><td>valid, 12.00 km</td><td>valid, 12.00 km</td><td class="pass">Pass</td></tr>
+      <tr><td>Bengaluru example against brute force (40,320 orders)</td><td>same km</td><td>27.8 = 27.8 km</td><td class="pass">Pass</td></tr>
+      <tr><td>300 places still answer quickly</td><td>under 1 second</td><td>about 1 ms</td><td class="pass">Pass</td></tr>
+    </table>
+    </div>
+    <p><b>All 18 pass.</b> One test also checks the quality of the quick method: on 60 random sets of
+      9 stops, nearest neighbour + 2-opt found the true best route in 44 of them and was 0.73% longer on average.</p>
+
+    <h2>5. Why this algorithm?</h2>
+
+    <p>I compared the methods I could have used. The numbers in the last column are from my own
+      experiments (next section).</p>
+
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr><th>Method</th><th>Best route?</th><th>Time</th><th>What I found</th></tr>
+      <tr><td>Try every order (brute force)</td><td>Yes</td><td>O(n!)</td><td>149 ms at 10 stops. At that rate 15 stops would need about 15 hours.</td></tr>
+      <tr><td>Every order + pruning</td><td>Yes</td><td>O(n!) worst case</td><td>16 times faster at 10 stops (9 ms), but 154 ms at 12 and growing fast.</td></tr>
+      <tr><td>Held-Karp (dynamic programming)</td><td>Yes</td><td>O(n&sup2; 2<sup>n</sup>)</td><td>Needs O(n 2<sup>n</sup>) memory and is harder to write. I did not try it.</td></tr>
+      <tr><td>Nearest neighbour only</td><td>No</td><td>O(n&sup2;)</td><td>Instant, but about 14% longer than the best route.</td></tr>
+      <tr class="table-warning"><td><b>Nearest neighbour + 2-opt</b></td><td><b>Almost</b></td><td><b>O(n&sup2;) per pass</b></td><td><b>About 1% longer than the best, in under 0.001 ms.</b></td></tr>
+    </table>
+    </div>
+
+    <p>So the planner uses the exact search when that is cheap (10 stops or fewer, under 10 ms) and
+      nearest neighbour + 2-opt when it is not. For a person driving around a city, a route that is 1%
+      longer than perfect and comes instantly is much more useful than a perfect one that takes hours.</p>
+
+    <p><b>Why not Dijkstra or A*?</b> I get asked this because those are the famous routing algorithms.
+      They solve a different problem: the shortest path between <i>two</i> places. That part is already
+      done by the OSRM server when it gives me the road distance of each pair. Dijkstra cannot decide the
+      <i>order</i> of the stops, which is the actual problem here.</p>
+
+    <h2>6. Time and space complexity</h2>
+
+    <table class="table table-bordered" style="max-width:700px">
+      <tr><th>Part</th><th>Time</th><th>Extra space</th></tr>
+      <tr><td>Distance table</td><td>O(n&sup2;)</td><td>O(n&sup2;)</td></tr>
+      <tr><td>Nearest neighbour</td><td>O(n&sup2;)</td><td>O(n) for the visited list</td></tr>
+      <tr><td>2-opt</td><td>O(n&sup2;) per pass, p passes</td><td>O(n) for a copy of the route</td></tr>
+      <tr><td>Exact search with pruning</td><td>O(n!) in the worst case</td><td>O(n) recursion depth</td></tr>
+      <tr><td><b>Planner with more than 10 stops</b></td><td><b>O(p &middot; n&sup2;)</b></td><td><b>O(n&sup2;)</b></td></tr>
+    </table>
+    <p>Here n is the number of places and p is the number of 2-opt passes. Nearest neighbour has two
+      loops inside each other, so n&sup2;. One 2-opt pass looks at every pair of positions, so also n&sup2;.
+      Nobody can say exactly how many passes 2-opt needs, but in my runs it was only 3 to 6, even for 800 stops.</p>
+
+    <h2>7. Experiments</h2>
+
+    <p>I measured everything on the <a href="benchmark.html">experiments page</a>, which anyone can run again.
+      The places are random points in a 20 km &times; 20 km square (about the size of a city). Every point
+      is the average of 20 random sets. The numbers below are from Chrome on my MacBook Air (M4).</p>
+
+    <h3>Time for one answer</h3>
+    <div class="chartbox"><canvas id="timeChart"></canvas></div>
+    <p>The vertical axis is a log scale, so a straight line going up means the time is multiplying.
+      Brute force gets about n times slower with every extra stop (13.8 ms at 9 stops, 149 ms at 10),
+      exactly like n! says. Pruning helps a lot but bends the same way. The quick method stays flat near
+      the bottom.</p>
+
+    <h3>How much longer than the best possible route?</h3>
+    <div class="chartbox" style="height:300px"><canvas id="gapChart"></canvas></div>
+    <p>Nearest neighbour alone is 4 to 14% longer than the best route. After 2-opt it is about 1%.</p>
+
+    <div class="table-responsive">
+    <table class="table table-bordered table-sm text-end">
+      <tr><th>Stops</th><th>Possible orders</th><th>Brute force</th><th>With pruning</th><th>NN + 2-opt</th><th>NN longer by</th><th>NN + 2-opt longer by</th></tr>
+      <tr><td>6</td><td>720</td><td>0.022 ms</td><td>0.012 ms</td><td>0.0002 ms</td><td>6.9%</td><td>0.10%</td></tr>
+      <tr><td>8</td><td>40,320</td><td>1.4 ms</td><td>0.277 ms</td><td>0.0004 ms</td><td>8.4%</td><td>0.12%</td></tr>
+      <tr><td>10</td><td>3,628,800</td><td>149 ms</td><td>9.2 ms</td><td>0.0006 ms</td><td>14.0%</td><td>0.67%</td></tr>
+      <tr><td>12</td><td>479,001,600</td><td>too slow</td><td>154 ms</td><td>0.0008 ms</td><td>12.8%</td><td>1.15%</td></tr>
+    </table>
+    </div>
+
+    <h3>Many stops</h3>
+    <p>Only the quick method can do these. (5 random sets per row.)</p>
+    <table class="table table-bordered table-sm text-end" style="max-width:700px">
+      <tr><th>Stops</th><th>Nearest neighbour</th><th>2-opt</th><th>Passes</th><th>2-opt made it shorter by</th></tr>
+      <tr><td>100</td><td>0.014 ms</td><td>0.072 ms</td><td>4.8</td><td>13.9%</td></tr>
+      <tr><td>200</td><td>0.058 ms</td><td>0.280 ms</td><td>4.6</td><td>13.3%</td></tr>
+      <tr><td>400</td><td>0.234 ms</td><td>1.2 ms</td><td>5.0</td><td>13.5%</td></tr>
+      <tr><td>800</td><td>0.935 ms</td><td>5.6 ms</td><td>6.0</td><td>14.2%</td></tr>
+    </table>
+    <p>Every time the number of stops doubles, nearest neighbour takes 4 times longer (0.058, 0.234,
+      0.935 ms). That is what O(n&sup2;) predicts. 2-opt grows a little faster than that because the
+      number of passes also goes up slowly. The distance table for 800 stops has 641,601 numbers, which
+      is the n&sup2; space.</p>
+
+    <h2>8. What it cannot do, and what next</h2>
+    <ul>
+      <li>There is no live traffic. The driving time is what OSRM gives for empty roads.</li>
+      <li>Above 10 stops the route is very good but not guaranteed to be the best one.</li>
+      <li>It plans for one vehicle and does not know shop timings.</li>
+      <li>The free map servers are meant for light use, so I limited it to 25 places.</li>
+    </ul>
+    <p>Next I want to add opening times for the places ("the bank closes at 4") and one more improvement
+      move called or-opt, which moves a single stop to a better position.</p>
+
+    <h2>What I learned</h2>
+    <p>Before this project I thought a routing problem always means Dijkstra. The biggest thing I learned
+      is that choosing the order of stops is a completely different and much harder problem, and that a
+      simple method that is "almost best" can be the right choice when the perfect answer is too slow.</p>
+
+    <h2>References</h2>
+    <ul class="refs">
+      <li>G. A. Croes, "A method for solving traveling-salesman problems", Operations Research, 1958 (the 2-opt paper).</li>
+      <li>Cormen, Leiserson, Rivest and Stein, Introduction to Algorithms, the section on the travelling-salesman problem.</li>
+      <li>Project OSRM, routing on OpenStreetMap data: project-osrm.org</li>
+      <li>Leaflet map library: leafletjs.com. Map data &copy; OpenStreetMap contributors.</li>
+      <li>Two existing tools I looked at for ideas: OptiMap (gebweb.net/optimap) and tspvis.com.</li>
+      <li>Code for this project: <a href="https://github.com/niranjan6030/multi-stop-route-planner">github.com/niranjan6030/multi-stop-route-planner</a></li>
+    </ul>
+
+  </div>
+
+  <script src="lib/chart.umd.min.js"></script>
+  <script>
+    // the numbers measured on benchmark.html (Chrome, MacBook Air M4)
+    var stops  = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+    var brute  = [0.0008, 0.0036, 0.022, 0.167, 1.4, 13.8, 149, null, null];
+    var pruned = [0.0007, 0.0026, 0.012, 0.055, 0.277, 1.4, 9.2, 58.1, 154];
+    var twoOpt = [0.0002, 0.0002, 0.0002, 0.0003, 0.0004, 0.0005, 0.0006, 0.0007, 0.0008];
+    var gapNN  = [3.9, 3.8, 6.9, 6.5, 8.4, 12.8, 14.0, 14.2, 12.8];
+    var gapTwo = [0.36, 0.08, 0.10, 0.10, 0.12, 1.12, 0.67, 1.11, 1.15];
+
+    function line(label, data, colour, shape) {
+      return { label: label, data: data, borderColor: colour, backgroundColor: colour, borderWidth: 2, pointRadius: 4, pointStyle: shape };
+    }
+    new Chart(document.getElementById("timeChart"), {
+      type: "line",
+      data: { labels: stops, datasets: [
+        line("Try every order (brute force)", brute, "#eb6834", "rect"),
+        line("Every order with pruning", pruned, "#2a78d6", "triangle"),
+        line("Nearest neighbour + 2-opt", twoOpt, "#1baf7a", "circle")
+      ] },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { usePointStyle: true } } },
+        scales: {
+          y: { type: "logarithmic", title: { display: true, text: "milliseconds (log scale)" } },
+          x: { title: { display: true, text: "number of stops" } }
+        }
+      }
+    });
+    new Chart(document.getElementById("gapChart"), {
+      type: "bar",
+      data: { labels: stops, datasets: [
+        { label: "Nearest neighbour only", data: gapNN, backgroundColor: "#eda100" },
+        { label: "Nearest neighbour + 2-opt", data: gapTwo, backgroundColor: "#1baf7a" }
+      ] },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          y: { title: { display: true, text: "% longer than the best route" } },
+          x: { title: { display: true, text: "number of stops" } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
